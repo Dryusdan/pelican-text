@@ -45,6 +45,7 @@ TEMPLATE_ARTICLE = """\
 
 -----------------------------------------------------------------------------------------
 * / 🏠 Home
+
 """
 
 
@@ -214,7 +215,8 @@ def generate_all_articles_page(generator):
 
 
 def article_generator_write_article(generator, content=None):
-    save_as = Path(generator.output_path) / Path(content.save_as)
+    save_as = Path(generator.output_path) / Path(content.save_as).with_suffix("")
+    print(save_as)
     generate_article(generator, content, save_as)
 
 
