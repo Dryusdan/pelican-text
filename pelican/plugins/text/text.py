@@ -1,66 +1,72 @@
 import html
-from pathlib import Path
 from io import StringIO
+from pathlib import Path
 
+import docutils.parsers.rst.directives
 import jinja2
 import pelican
-import rst2gemtext
-import docutils.parsers.rst.directives
+import rst2text
 
 DISPLAYED_ARTICLE_COUNT_ON_HOME = 10
-
 TEMPLATE_HOME = """\
-# {{ SITENAME }}
+{{ SITENAME }}
+=============
 
-## Latest Articles
+Latest Articles
+~~~~~~~~~~~~~~~
 {% for i in range(articles_count_on_home) %}{% set article = articles[i] %}
-=> {{ GEMSITEURL }}/{{ article.url | replace(".html", ".gmi") }} {{ article.date.strftime("%Y-%m-%d") }} {{ article.raw_title -}}
+* {{ article.date.strftime("%d/%m/%Y") }} {{ article.raw_title }}
+  /{{ article.url | replace(".html", "") }}
 {% endfor %}
 {% if articles | length > articles_count_on_home %}
-=> {{ GEMSITEURL }}/all_articles.gmi ➕ All Articles
+* /all ➕ All Articles
 {% endif %}
 """
 
 TEMPLATE_ARTICLES_INDEX_PAGE = """\
-# All Articles — {{ SITENAME }}
+All Articles — {{ SITENAME }}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {% for article in articles %}
-=> {{ GEMSITEURL }}/{{ article.url | replace(".html", ".gmi") }} {{ article.date.strftime("%Y-%m-%d") }} {{ article.raw_title -}}
+* {{ article.date.strftime("%d/%m/%Y") }} {{ article.raw_title }}
+  /{{ article.url | replace(".html", "") }}
 {% endfor %}
 
---------------------------------------------------------------------------------
-=> {{ GEMSITEURL }}/ 🏠 Home
+-----------------------------------------------------------------------------------------
+
+* / 🏠 Home
 """
 
 TEMPLATE_ARTICLE = """\
-# {{ article.raw_title }}
-{{ article.date.strftime("%Y-%m-%d") }}
+{{ article.raw_title }}
+~~~~~~~~~~~~~~~~~~~~~~~
+{{ article.date.strftime("%d/%m/%Y") }}
 
 {{ article.content_gemtext }}
 
---------------------------------------------------------------------------------
-=> {{ GEMSITEURL }}/ 🏠 Home
+-----------------------------------------------------------------------------------------
+* / 🏠 Home
 """
 
 
-class PelicanGemtextWriter(rst2gemtext.GemtextWriter):
+class PelicanTextWriter(rst2text.TextWriter):
     def __init__(self, generator, article):
-        rst2gemtext.GemtextWriter.__init__(self)
+        rst2text.TextWriter.__init__(self)
         self._generator = generator  # Pelican generator
         self._article = article  # Pelican article
 
     def _remove_first_title(self):
         for i in range(len(self.visitor.nodes)):
             node = self.visitor.nodes[i]
-            if type(node) is rst2gemtext.TitleNode and node.level == 1:
+            if type(node) is rst2text.TitleNode and node.level == 1:
                 self.visitor.nodes.pop(i)
                 break
 
     def _remove_attach_tag_from_links(self):
         def _loop_on_nodes(nodes):
             for node in nodes:
-                if isinstance(node, rst2gemtext.NodeGroup):
+                if isinstance(node, rst2text.NodeGroup):
                     _loop_on_nodes(node.nodes)
-                elif isinstance(node, rst2gemtext.LinkNode):
+                elif isinstance(node, rst2text.LinkNode):
                     if node.uri.startswith("{attach}"):
                         node.uri = node.uri[8:]
                     if node.rawtext.startswith("{attach}"):
@@ -71,18 +77,18 @@ class PelicanGemtextWriter(rst2gemtext.GemtextWriter):
     def _clean_figure_links(self):
         def _loop_on_nodes(nodes):
             for node in nodes:
-                if isinstance(node, rst2gemtext.NodeGroup) and not isinstance(
-                    node, rst2gemtext.FigureNode
+                if isinstance(node, rst2text.NodeGroup) and not isinstance(
+                    node, rst2text.FigureNode
                 ):
                     _loop_on_nodes(node.nodes)
                     continue
-                if not isinstance(node, rst2gemtext.FigureNode):
+                if not isinstance(node, rst2text.FigureNode):
                     continue
                 if len(node.nodes) < 2:
                     continue
-                if not isinstance(node.nodes[0], rst2gemtext.LinkNode):
+                if not isinstance(node.nodes[0], rst2text.LinkNode):
                     continue
-                if not isinstance(node.nodes[1], rst2gemtext.LinkNode):
+                if not isinstance(node.nodes[1], rst2text.LinkNode):
                     continue
                 if node.nodes[0].uri.endswith(node.nodes[1].uri) or node.nodes[
                     1
@@ -97,10 +103,10 @@ class PelicanGemtextWriter(rst2gemtext.GemtextWriter):
     def _resolve_internal_links(self):
         def _loop_on_nodes(nodes):
             for node in nodes:
-                if isinstance(node, rst2gemtext.NodeGroup):
+                if isinstance(node, rst2text.NodeGroup):
                     _loop_on_nodes(node.nodes)
                     continue
-                if not isinstance(node, rst2gemtext.LinkNode):
+                if not isinstance(node, rst2text.LinkNode):
                     continue
                 if not node.uri.startswith("{filename}"):
                     continue
@@ -109,10 +115,6 @@ class PelicanGemtextWriter(rst2gemtext.GemtextWriter):
                 for article in self._generator.articles:
                     if target_path.as_posix() == article.source_path:
                         target_uri = Path("/%s" % article.url)
-                        if target_uri.as_posix().endswith(
-                            ".html"
-                        ) or target_uri.as_posix().endswith(".htm"):
-                            target_uri = target_uri.with_suffix(".gmi")
                         node.uri = target_uri.as_posix()
                         break
 
@@ -136,13 +138,13 @@ def generate_article(generator, article, save_as):
 
     # Read and parse the reStructuredText file
     with open(article.source_path, "r") as rst_file:
-        document = rst2gemtext.parse_rst(rst_file.read(), rst_file.name)
+        document = rst2text.parse_rst(rst_file.read(), rst_file.name)
 
     # Avoid HTML entities in titles
     article.raw_title = html.unescape(article.title)
 
     # Convert the reStructuredText into Gemtext
-    writer = PelicanGemtextWriter(generator, article)
+    writer = PelicanTextWriter(generator, article)
     gmi_io = StringIO()
     writer.write(document, gmi_io)
     gmi_io.seek(0)
@@ -154,8 +156,8 @@ def generate_article(generator, article, save_as):
         generator.context,
         article=article,
         GEMSITEURL=generator.settings.get("SITEURL", "")
-        .replace("http://", "gemini://")
-        .replace("https://", "gemini://"),
+        .replace("http://", "/")
+        .replace("https://", "/"),
     )
 
     # Write the output file
@@ -170,7 +172,7 @@ def generate_article(generator, article, save_as):
 
 
 def generate_home_page(generator):
-    save_as = Path(generator.output_path) / "index.gmi"
+    save_as = Path(generator.output_path) / "index"
     template_text = generator.settings.get("GEMINI_TEMPLATE_HOME", TEMPLATE_HOME)
     articles_count_on_home = generator.settings.get(
         "GEMINI_DISPLAYED_ARTICLE_COUNT_ON_HOME", DISPLAYED_ARTICLE_COUNT_ON_HOME
@@ -182,8 +184,8 @@ def generate_home_page(generator):
         generator.context,
         articles_count_on_home=min(len(generator.articles), articles_count_on_home),
         GEMSITEURL=generator.settings.get("SITEURL", "")
-        .replace("http://", "gemini://")
-        .replace("https://", "gemini://"),
+        .replace("http://", "/")
+        .replace("https://", "/"),
     )
 
     # Write the output file
@@ -192,7 +194,7 @@ def generate_home_page(generator):
 
 
 def generate_all_articles_page(generator):
-    save_as = Path(generator.output_path) / "all_articles.gmi"
+    save_as = Path(generator.output_path) / "all"
     template_text = generator.settings.get(
         "GEMINI_TEMPLATE_ARTICLES_INDEX_PAGE", TEMPLATE_ARTICLES_INDEX_PAGE
     )
@@ -202,8 +204,8 @@ def generate_all_articles_page(generator):
     rendered_page = template.render(
         generator.context,
         GEMSITEURL=generator.settings.get("SITEURL", "")
-        .replace("http://", "gemini://")
-        .replace("https://", "gemini://"),
+        .replace("http://", "/")
+        .replace("https://", "/"),
     )
 
     # Write the output file
@@ -212,7 +214,7 @@ def generate_all_articles_page(generator):
 
 
 def article_generator_write_article(generator, content=None):
-    save_as = Path(generator.output_path) / Path(content.save_as).with_suffix(".gmi")
+    save_as = Path(generator.output_path) / Path(content.save_as)
     generate_article(generator, content, save_as)
 
 

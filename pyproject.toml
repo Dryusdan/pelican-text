@@ -1,2 +1,38 @@
 [tool.black]
 target-version = ['py39']
+
+[tool.poetry.group.dev.dependencies]
+nox = "^2025.5.1"
+flake8 = "^7.2.0"
+black = "^25.1.0"
+ruff = "^0.11.13"
+isort = "^6.0.1"
+
+
+
+[[tool.poetry.source]]
+name = "forgejo"
+url = "https://git.dryusdan.fr/api/packages/Dryusdan/pypi"
+priority = "explicit"
+
+[tool.poetry]
+packages = [{include = "pelican/"}]
+
+[project]
+name = "pelican-text"
+version = "0.1.0"
+description = "Pelican plugin to generate text"
+authors = [
+    {name = "Dryusdan",email = "contact@dryusdan.fr"}
+]
+license = {text = "GPLv3"}
+readme = "README.rst"
+requires-python = ">=3.11"
+dependencies = [
+    "rst2text @ git+https://git.dryusdan.fr/Dryusdan/rst2text.git"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
