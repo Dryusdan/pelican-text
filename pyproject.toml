@@ -20,7 +20,7 @@ packages = [{include = "pelican/"}]
 
 [project]
 name = "pelican-text"
-version = "0.1.1"
+version = "0.1.2"
 description = "Pelican plugin to generate text"
 authors = [
     {name = "Dryusdan",email = "contact@dryusdan.fr"}
