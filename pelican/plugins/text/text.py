@@ -9,7 +9,6 @@ import rst2text
 
 DISPLAYED_ARTICLE_COUNT_ON_HOME = 10
 TEMPLATE_HOME = """\
-{{ TOP_PAGE_ASCII }}
 {{ SITENAME }}
 =============
 
@@ -25,7 +24,6 @@ Latest Articles
 """
 
 TEMPLATE_ARTICLES_INDEX_PAGE = """\
-{{ TOP_PAGE_ASCII }}
 All Articles — {{ SITENAME }}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {% for article in articles %}
@@ -39,7 +37,6 @@ All Articles — {{ SITENAME }}
 """
 
 TEMPLATE_ARTICLE = """\
-{{ TOP_PAGE_ASCII }}
 {{ article.raw_title }}
 ~~~~~~~~~~~~~~~~~~~~~~~
 {{ article.date.strftime("%d/%m/%Y") }}
